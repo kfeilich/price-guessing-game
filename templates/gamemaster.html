@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Master Upload - Price is Wrong</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+        
+        .upload-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            color: #333;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+        
+        .existing-sets {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            color: #333;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            margin-top: 30px;
+        }
+        
+        .set-list {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .set-item {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .set-info {
+            flex: 1;
+        }
+        
+        .set-info h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .set-info .pitch {
+            font-size: 0.9em;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+        
+        .set-info .meta {
+            font-size: 0.85em;
+            color: #9ca3af;
+        }
+        
+        .set-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            font-size: 1em;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .items-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 3px solid #667eea;
+        }
+        
+        .item-card {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #e5e7eb;
+            cursor: move;
+            transition: all 0.2s;
+        }
+        
+        .item-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+        
+        .item-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+        
+        .item-card.drag-over {
+            border-top: 4px solid #667eea;
+        }
+        
+        .item-card h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .drag-handle {
+            cursor: grab;
+            font-size: 1.5em;
+            color: #9ca3af;
+        }
+        
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        
+        .item-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        select {
+            padding: 12px;
+            font-size: 1em;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            background: white;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        button.secondary {
+            background: #6b7280;
+        }
+        
+        button.secondary:hover {
+            background: #4b5563;
+        }
+        
+        button.danger {
+            background: #dc2626;
+        }
+        
+        button.danger:hover {
+            background: #991b1b;
+        }
+        
+        .button-row {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .success-message {
+            background: #4ade80;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .error-message {
+            background: #dc2626;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .helper-text {
+            font-size: 0.9em;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Game Master Upload Panel</h1>
+        <p style="text-align: center; margin-bottom: 30px; font-size: 1.1em;">Create your ridiculously priced item sets</p>
+        
+        <div class="upload-panel">
+            <h2 id="formTitle" style="margin-bottom: 20px;">Create New Set</h2>
+            
+            <div class="form-group">
+                <label>Set Name *</label>
+                <input type="text" id="setName" placeholder="e.g., 'Estate Sale Extravaganza'" />
+                <div class="helper-text">Give your set a catchy name</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Pitch Line *</label>
+                <textarea id="pitchLine" placeholder="e.g., 'One person's trash is another person's $50,000 mystery'"></textarea>
+                <div class="helper-text">A brief, enticing description of this set</div>
+            </div>
+            
+            <div class="items-section">
+                <h3 style="margin-bottom: 20px;">Items</h3>
+                <div id="itemsList"></div>
+                <button class="secondary" onclick="addItem()">+ Add Item</button>
+            </div>
+            
+            <div class="button-row">
+                <button onclick="saveSet()">Save Set</button>
+                <button class="secondary" onclick="cancelEdit()">Cancel / New Set</button>
+                <button class="secondary" onclick="window.location.href='/'">Go to Game</button>
+            </div>
+            
+            <div id="message"></div>
+        </div>
+        
+        <div class="existing-sets">
+            <h2 style="margin-bottom: 20px;">Existing Sets</h2>
+            <div id="existingSets" class="set-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let items = [];
+        let itemCounter = 0;
+        let editingSetId = null;
+        
+        // Load existing sets on page load
+        window.addEventListener('DOMContentLoaded', loadExistingSets);
+        
+        function loadExistingSets() {
+            fetch('/get_sets')
+                .then(response => response.json())
+                .then(sets => {
+                    const container = document.getElementById('existingSets');
+                    if (sets.length === 0) {
+                        container.innerHTML = '<p style="text-align: center; color: #9ca3af;">No sets created yet</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = '';
+                    sets.forEach(set => {
+                        const setItem = document.createElement('div');
+                        setItem.className = 'set-item';
+                        
+                        const setInfo = document.createElement('div');
+                        setInfo.className = 'set-info';
+                        setInfo.innerHTML = `
+                            <h4>${set.name}</h4>
+                            <div class="pitch">${set.pitch_line}</div>
+                            <div class="meta">${set.items.length} items</div>
+                        `;
+                        
+                        const setActions = document.createElement('div');
+                        setActions.className = 'set-actions';
+                        
+                        const editBtn = document.createElement('button');
+                        editBtn.textContent = 'Edit';
+                        editBtn.onclick = () => editSet(set.id);
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'danger';
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.onclick = () => deleteSet(set.id, set.name);
+                        
+                        setActions.appendChild(editBtn);
+                        setActions.appendChild(deleteBtn);
+                        
+                        setItem.appendChild(setInfo);
+                        setItem.appendChild(setActions);
+                        container.appendChild(setItem);
+                    });
+                });
+        }
+        
+        function editSet(setId) {
+            fetch('/get_sets')
+                .then(response => response.json())
+                .then(sets => {
+                    const set = sets.find(s => s.id === setId);
+                    if (!set) return;
+                    
+                    editingSetId = setId;
+                    document.getElementById('formTitle').textContent = 'Edit Set: ' + set.name;
+                    document.getElementById('setName').value = set.name;
+                    document.getElementById('pitchLine').value = set.pitch_line;
+                    
+                    // Clear existing items
+                    document.getElementById('itemsList').innerHTML = '';
+                    items = [];
+                    itemCounter = 0;
+                    
+                    // Load items
+                    set.items.forEach(item => {
+                        addItem();
+                        const itemId = itemCounter - 1;
+                        document.getElementById(`itemName-${itemId}`).value = item.name;
+                        document.getElementById(`itemDesc-${itemId}`).value = item.description;
+                        document.getElementById(`itemImage-${itemId}`).value = item.image_url;
+                        document.getElementById(`itemDifficulty-${itemId}`).value = item.difficulty;
+                        document.getElementById(`itemPrice-${itemId}`).value = item.price;
+                        previewImage(itemId);
+                    });
+                    
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+        }
+        
+        function deleteSet(setId, setName) {
+            if (!confirm(`Are you sure you want to delete "${setName}"? This cannot be undone.`)) {
+                return;
+            }
+            
+            fetch(`/delete_set/${setId}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`Set "${setName}" deleted successfully`, 'success');
+                        loadExistingSets();
+                        
+                        // If we were editing this set, clear the form
+                        if (editingSetId === setId) {
+                            cancelEdit();
+                        }
+                    }
+                });
+        }
+        
+        function cancelEdit() {
+            editingSetId = null;
+            document.getElementById('formTitle').textContent = 'Create New Set';
+            document.getElementById('setName').value = '';
+            document.getElementById('pitchLine').value = '';
+            document.getElementById('itemsList').innerHTML = '';
+            items = [];
+            itemCounter = 0;
+            addItem(); // Add one default item
+        }
+        
+        function addItem() {
+            const itemId = itemCounter++;
+            items.push({ id: itemId });
+            
+            const itemsDiv = document.getElementById('itemsList');
+            const itemCard = document.createElement('div');
+            itemCard.className = 'item-card';
+            itemCard.id = `item-${itemId}`;
+            itemCard.draggable = true;
+            itemCard.setAttribute('data-item-id', itemId);
+            
+            itemCard.innerHTML = `
+                <h4><span class="drag-handle">⋮⋮</span> Item ${itemId + 1}</h4>
+                <div class="form-group">
+                    <label>Item Name *</label>
+                    <input type="text" id="itemName-${itemId}" placeholder="e.g., 'Vintage Brooch'" />
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea id="itemDesc-${itemId}" placeholder="Gold-toned metal, some stones missing, found in grandmother's drawer"></textarea>
+                </div>
+                <div class="item-row">
+                    <div class="form-group">
+                        <label>Image URL *</label>
+                        <input type="text" id="itemImage-${itemId}" placeholder="https://..." onchange="previewImage(${itemId})" />
+                        <img id="preview-${itemId}" class="preview-image" style="display: none;" />
+                        <div class="helper-text">Direct link to image (use Imgur, Cloudinary, or similar)</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Difficulty *</label>
+                        <select id="itemDifficulty-${itemId}">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                            <option value="cruel">Cruel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Actual Price (USD) *</label>
+                        <input type="number" id="itemPrice-${itemId}" step="0.01" placeholder="42.50" />
+                    </div>
+                </div>
+                <button class="danger" onclick="removeItem(${itemId})">Remove Item</button>
+            `;
+            
+            // Add drag event listeners
+            itemCard.addEventListener('dragstart', handleDragStart);
+            itemCard.addEventListener('dragend', handleDragEnd);
+            itemCard.addEventListener('dragover', handleDragOver);
+            itemCard.addEventListener('drop', handleDrop);
+            itemCard.addEventListener('dragleave', handleDragLeave);
+            
+            itemsDiv.appendChild(itemCard);
+            updateItemNumbers();
+        }
+        
+        function removeItem(itemId) {
+            const itemCard = document.getElementById(`item-${itemId}`);
+            itemCard.remove();
+            items = items.filter(item => item.id !== itemId);
+            updateItemNumbers();
+        }
+        
+        function updateItemNumbers() {
+            const itemCards = document.getElementById('itemsList').children;
+            Array.from(itemCards).forEach((card, index) => {
+                const h4 = card.querySelector('h4');
+                const itemId = card.getAttribute('data-item-id');
+                h4.innerHTML = `<span class="drag-handle">⋮⋮</span> Item ${index + 1}`;
+            });
+        }
+        
+        // Drag and drop functionality
+        let draggedElement = null;
+        
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+        
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            // Remove all drag-over classes
+            document.querySelectorAll('.item-card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
+        }
+        
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            if (this !== draggedElement) {
+                this.classList.add('drag-over');
+            }
+            return false;
+        }
+        
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+        
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            if (draggedElement !== this) {
+                // Get parent container
+                const itemsList = document.getElementById('itemsList');
+                
+                // Determine if we should insert before or after
+                const draggedIndex = Array.from(itemsList.children).indexOf(draggedElement);
+                const targetIndex = Array.from(itemsList.children).indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    // Insert after
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    // Insert before
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+                
+                // Update the items array order
+                const itemCards = Array.from(itemsList.children);
+                const newItems = itemCards.map(card => {
+                    const itemId = parseInt(card.getAttribute('data-item-id'));
+                    return items.find(item => item.id === itemId);
+                });
+                items = newItems;
+                
+                updateItemNumbers();
+            }
+            
+            this.classList.remove('drag-over');
+            return false;
+        }
+        
+        function previewImage(itemId) {
+            const url = document.getElementById(`itemImage-${itemId}`).value;
+            const preview = document.getElementById(`preview-${itemId}`);
+            if (url) {
+                preview.src = url;
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+        
+        function saveSet() {
+            const setName = document.getElementById('setName').value.trim();
+            const pitchLine = document.getElementById('pitchLine').value.trim();
+            
+            if (!setName || !pitchLine) {
+                showMessage('Please fill in set name and pitch line', 'error');
+                return;
+            }
+            
+            // Build items data in the current visual order
+            const itemCards = Array.from(document.getElementById('itemsList').children);
+            const itemsData = [];
+            
+            for (let itemCard of itemCards) {
+                const itemId = parseInt(itemCard.getAttribute('data-item-id'));
+                const name = document.getElementById(`itemName-${itemId}`).value.trim();
+                const desc = document.getElementById(`itemDesc-${itemId}`).value.trim();
+                const image = document.getElementById(`itemImage-${itemId}`).value.trim();
+                const difficulty = document.getElementById(`itemDifficulty-${itemId}`).value;
+                const price = parseFloat(document.getElementById(`itemPrice-${itemId}`).value);
+                
+                if (!name || !desc || !image || isNaN(price)) {
+                    const itemNumber = itemCards.indexOf(itemCard) + 1;
+                    showMessage(`Please fill in all fields for Item ${itemNumber}`, 'error');
+                    return;
+                }
+                
+                itemsData.push({
+                    name: name,
+                    description: desc,
+                    image_url: image,
+                    difficulty: difficulty,
+                    price: price
+                });
+            }
+            
+            if (itemsData.length === 0) {
+                showMessage('Please add at least one item', 'error');
+                return;
+            }
+            
+            const setData = {
+                set_name: setName,
+                pitch_line: pitchLine,
+                items: itemsData
+            };
+            
+            // Add set_id if editing
+            if (editingSetId !== null) {
+                setData.set_id = editingSetId;
+            }
+            
+            fetch('/upload_set', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(setData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const action = data.updated ? 'updated' : 'saved';
+                    showMessage(`Set "${setName}" ${action} successfully!`, 'success');
+                    
+                    // Clear form and reload sets
+                    cancelEdit();
+                    loadExistingSets();
+                } else {
+                    showMessage('Error saving set: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Error saving set: ' + error, 'error');
+            });
+        }
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = text;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Add one item by default
+        addItem();
+    </script>
+</body>
+</html>

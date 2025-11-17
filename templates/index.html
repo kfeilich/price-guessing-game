@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price is... Wrong? 💸</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+        
+        .tagline {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-style: italic;
+        }
+        
+        .join-screen, .lobby-screen, .game-screen, .scoreboard-screen {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            color: #333;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .join-screen input, .guess-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .set-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .set-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .set-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        
+        .set-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        
+        .set-card .pitch {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .set-card .count {
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        
+        .item-display {
+            text-align: center;
+        }
+        
+        .item-image {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        .item-name {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #667eea;
+        }
+        
+        .item-description {
+            font-size: 1.2em;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+        
+        .difficulty-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .difficulty-easy { background: #4ade80; color: white; }
+        .difficulty-medium { background: #fbbf24; color: white; }
+        .difficulty-hard { background: #f97316; color: white; }
+        .difficulty-cruel { background: #dc2626; color: white; }
+        
+        .guess-section {
+            margin: 30px 0;
+            padding: 30px;
+            background: #f3f4f6;
+            border-radius: 15px;
+        }
+        
+        .guess-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .guess-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .guess-item .username {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .guess-item .guess-value {
+            font-size: 1.5em;
+            color: #333;
+        }
+        
+        .guess-item .score {
+            font-size: 1.2em;
+            color: #4ade80;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .actual-price {
+            font-size: 3em;
+            color: #667eea;
+            font-weight: bold;
+            margin: 30px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .scoreboard {
+            margin: 20px 0;
+        }
+        
+        .scoreboard-item {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .scoreboard-item.first {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .scoreboard-rank {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 20px;
+        }
+        
+        .scoreboard-username {
+            flex: 1;
+            font-size: 1.2em;
+        }
+        
+        .scoreboard-score {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #764ba2;
+        }
+        
+        .gm-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        .gm-badge {
+            background: #dc2626;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .status-text {
+            text-align: center;
+            font-size: 1.1em;
+            color: #667eea;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💸 Price is... Wrong? 💸</h1>
+        <p class="tagline">Because who knew estate sale jewelry could cost more than a yacht?</p>
+        
+        <!-- Join Screen -->
+        <div id="joinScreen" class="join-screen">
+            <h2 style="text-align: center; margin-bottom: 20px;">Join the Game</h2>
+            <input type="text" id="usernameInput" placeholder="Enter your username" />
+            <div style="text-align: center;">
+                <button onclick="joinAsPlayer()">Join as Player</button>
+                <button onclick="joinAsGM()">Join as Game Master</button>
+            </div>
+        </div>
+        
+        <!-- Lobby Screen -->
+        <div id="lobbyScreen" class="lobby-screen hidden">
+            <h2 style="text-align: center; margin-bottom: 30px;">Select a Set to Play</h2>
+            <div id="setGrid" class="set-grid"></div>
+            <div class="status-text" id="waitingText">Waiting for Game Master to start...</div>
+        </div>
+        
+        <!-- Game Screen -->
+        <div id="gameScreen" class="game-screen hidden">
+            <div class="item-display">
+                <div class="item-name" id="itemName"></div>
+                <img id="itemImage" class="item-image" src="" alt="Item" />
+                <div class="item-description" id="itemDescription"></div>
+                <div id="difficultyBadge" class="difficulty-badge"></div>
+                
+                <div id="guessSection" class="guess-section">
+                    <h3 style="text-align: center; margin-bottom: 15px;">Your Guess</h3>
+                    <input type="number" id="guessInput" class="guess-input" placeholder="Enter price in USD" step="0.01" />
+                    <div style="text-align: center;">
+                        <button onclick="submitGuess()">Submit Guess</button>
+                    </div>
+                    <div class="status-text" id="guessStatus"></div>
+                </div>
+                
+                <div id="guessesReveal" class="hidden">
+                    <h3 style="text-align: center; margin: 30px 0;">Everyone's Guesses</h3>
+                    <div id="guessesList" class="guess-list"></div>
+                </div>
+                
+                <div id="answerReveal" class="hidden">
+                    <h3 style="text-align: center; margin: 30px 0;">The Actual Price</h3>
+                    <div class="actual-price" id="actualPrice"></div>
+                    <h4 style="text-align: center; margin: 20px 0;">Scores This Round</h4>
+                    <div id="resultsList" class="guess-list"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scoreboard Screen -->
+        <div id="scoreboardScreen" class="scoreboard-screen hidden">
+            <h2 style="text-align: center; margin-bottom: 30px;">🏆 Final Scoreboard 🏆</h2>
+            <div id="scoreboardList" class="scoreboard"></div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button onclick="backToLobby()" id="backToLobbyBtn" class="hidden">Play Again</button>
+            </div>
+        </div>
+        
+        <!-- GM Controls -->
+        <div id="gmControls" class="gm-controls hidden">
+            <div class="gm-badge">GAME MASTER</div>
+            <button id="revealGuessesBtn" onclick="revealGuesses()" class="hidden">Reveal Guesses</button>
+            <button id="revealAnswerBtn" onclick="revealAnswer()" class="hidden">Reveal Answer</button>
+            <button id="nextItemBtn" onclick="nextItem()" class="hidden">Next Item</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let currentRoom = 'default';
+        let isGM = false;
+        let username = '';
+        let hasGuessed = false;
+        
+        function joinAsPlayer() {
+            username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('Please enter a username!');
+                return;
+            }
+            isGM = false;
+            joinGame();
+        }
+        
+        function joinAsGM() {
+            username = 'Game Master';
+            isGM = true;
+            joinGame();
+        }
+        
+        function joinGame() {
+            socket.emit('join_game', {
+                room: currentRoom,
+                username: username,
+                is_gm: isGM
+            });
+            
+            document.getElementById('joinScreen').classList.add('hidden');
+            document.getElementById('lobbyScreen').classList.remove('hidden');
+            
+            if (isGM) {
+                document.getElementById('gmControls').classList.remove('hidden');
+                document.getElementById('waitingText').classList.add('hidden');
+            }
+            
+            loadSets();
+        }
+        
+        function loadSets() {
+            fetch('/get_sets')
+                .then(response => response.json())
+                .then(sets => {
+                    const grid = document.getElementById('setGrid');
+                    grid.innerHTML = '';
+                    sets.forEach(set => {
+                        const card = document.createElement('div');
+                        card.className = 'set-card';
+                        card.innerHTML = `
+                            <h3>${set.name}</h3>
+                            <div class="pitch">${set.pitch_line}</div>
+                            <div class="count">${set.items.length} items</div>
+                        `;
+                        if (isGM) {
+                            card.onclick = () => startSet(set.id);
+                        }
+                        grid.appendChild(card);
+                    });
+                });
+        }
+        
+        function startSet(setId) {
+            if (!isGM) return;
+            socket.emit('start_set', { room: currentRoom, set_id: setId });
+        }
+        
+        function submitGuess() {
+            const guess = parseFloat(document.getElementById('guessInput').value);
+            if (isNaN(guess) || guess < 0) {
+                alert('Please enter a valid price!');
+                return;
+            }
+            
+            socket.emit('submit_guess', { room: currentRoom, guess: guess });
+            document.getElementById('guessInput').disabled = true;
+            document.querySelector('#guessSection button').disabled = true;
+            hasGuessed = true;
+            document.getElementById('guessStatus').textContent = 'Guess submitted! Waiting for others...';
+        }
+        
+        function revealGuesses() {
+            socket.emit('reveal_guesses', { room: currentRoom });
+        }
+        
+        function revealAnswer() {
+            socket.emit('reveal_answer', { room: currentRoom });
+        }
+        
+        function nextItem() {
+            socket.emit('next_item', { room: currentRoom });
+        }
+        
+        function backToLobby() {
+            socket.emit('back_to_lobby', { room: currentRoom });
+        }
+        
+        // Socket event handlers
+        socket.on('show_item', (data) => {
+            document.getElementById('lobbyScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('scoreboardScreen').classList.add('hidden');
+            
+            const item = data.item;
+            document.getElementById('itemName').textContent = item.name;
+            document.getElementById('itemImage').src = item.image_url;
+            document.getElementById('itemDescription').textContent = item.description;
+            
+            const badge = document.getElementById('difficultyBadge');
+            badge.textContent = item.difficulty.toUpperCase();
+            badge.className = 'difficulty-badge difficulty-' + item.difficulty;
+            
+            document.getElementById('guessSection').classList.remove('hidden');
+            document.getElementById('guessesReveal').classList.add('hidden');
+            document.getElementById('answerReveal').classList.add('hidden');
+            
+            document.getElementById('guessInput').value = '';
+            document.getElementById('guessInput').disabled = false;
+            document.querySelector('#guessSection button').disabled = false;
+            document.getElementById('guessStatus').textContent = '';
+            hasGuessed = false;
+            
+            if (isGM) {
+                document.getElementById('revealGuessesBtn').classList.remove('hidden');
+                document.getElementById('revealAnswerBtn').classList.add('hidden');
+                document.getElementById('nextItemBtn').classList.add('hidden');
+            }
+        });
+        
+        socket.on('guess_submitted', (data) => {
+            document.getElementById('guessStatus').textContent = 
+                `${data.total_guesses} of ${data.total_players} guesses submitted`;
+        });
+        
+        socket.on('show_guesses', (data) => {
+            document.getElementById('guessSection').classList.add('hidden');
+            document.getElementById('guessesReveal').classList.remove('hidden');
+            
+            const list = document.getElementById('guessesList');
+            list.innerHTML = '';
+            data.guesses.forEach(g => {
+                const item = document.createElement('div');
+                item.className = 'guess-item';
+                item.innerHTML = `
+                    <div class="username">${g.username}</div>
+                    <div class="guess-value">$${g.guess.toFixed(2)}</div>
+                `;
+                list.appendChild(item);
+            });
+            
+            if (isGM) {
+                document.getElementById('revealGuessesBtn').classList.add('hidden');
+                document.getElementById('revealAnswerBtn').classList.remove('hidden');
+            }
+        });
+        
+        socket.on('show_answer', (data) => {
+            document.getElementById('guessesReveal').classList.add('hidden');
+            document.getElementById('answerReveal').classList.remove('hidden');
+            
+            document.getElementById('actualPrice').textContent = 
+                `$${data.actual_price.toFixed(2)}`;
+            
+            const list = document.getElementById('resultsList');
+            list.innerHTML = '';
+            data.results.sort((a, b) => b.score - a.score);
+            data.results.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'guess-item';
+                item.innerHTML = `
+                    <div class="username">${r.username}</div>
+                    <div class="guess-value">$${r.guess.toFixed(2)}</div>
+                    <div class="score">+${r.score} pts (Total: ${r.total_score})</div>
+                `;
+                list.appendChild(item);
+            });
+            
+            if (isGM) {
+                document.getElementById('revealAnswerBtn').classList.add('hidden');
+                document.getElementById('nextItemBtn').classList.remove('hidden');
+            }
+        });
+        
+        socket.on('show_scoreboard', (data) => {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('scoreboardScreen').classList.remove('hidden');
+            
+            const list = document.getElementById('scoreboardList');
+            list.innerHTML = '';
+            data.scoreboard.forEach((player, index) => {
+                const item = document.createElement('div');
+                item.className = 'scoreboard-item' + (index === 0 ? ' first' : '');
+                item.innerHTML = `
+                    <div class="scoreboard-rank">${index + 1}</div>
+                    <div class="scoreboard-username">${player.username}</div>
+                    <div class="scoreboard-score">${player.score} pts</div>
+                `;
+                list.appendChild(item);
+            });
+            
+            if (isGM) {
+                document.getElementById('backToLobbyBtn').classList.remove('hidden');
+                document.getElementById('nextItemBtn').classList.add('hidden');
+            }
+        });
+        
+        socket.on('return_to_lobby', () => {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('scoreboardScreen').classList.add('hidden');
+            document.getElementById('lobbyScreen').classList.remove('hidden');
+            loadSets();
+        });
+    </script>
+</body>
+</html>

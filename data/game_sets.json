@@ -1,0 +1,81 @@
+[
+  {
+    "id": 1,
+    "name": "Cock-a-doodle Debt",
+    "pitch_line": "Rooster brooches and pins date back to ancient times, with the rooster signifiying vigilence and bravery. They grew especially popular in the late 19th century and later.",
+    "items": [
+      {
+        "name": "Rooster Brooch",
+        "description": "Approximately 2.25\" long. Ready to peck your eyes out, with style.",
+        "image_url": "https://i.imgur.com/InFUcsG.png",
+        "difficulty": "medium",
+        "price": 9200
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "Approximately 1.75\" long. You wish you had swag like this bird.",
+        "image_url": "https://imgur.com/6bbya7Q.png",
+        "difficulty": "hard",
+        "price": 21750
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "It's giving Foghorn Leghorn made Liberace. 1.7\".",
+        "image_url": "https://imgur.com/BDOqDwQ.png",
+        "difficulty": "medium",
+        "price": 239
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "Bring on the mixed media. 3\". Might haunt your dreams.",
+        "image_url": "https://imgur.com/ACajiOT.png",
+        "difficulty": "medium",
+        "price": 150
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "I'm loud, I'm colorful, and I am oddly proportioned. 2.5\"",
+        "image_url": "https://imgur.com/UfyE1OB.png",
+        "difficulty": "easy",
+        "price": 15
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "What a tasteful and stately rooster. 2.25\"",
+        "image_url": "https://imgur.com/kudXdpF.png",
+        "difficulty": "hard",
+        "price": 9
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "I think this elder statesman of a rooster may need a meal or 3. Someone feed that bird. Size not listed.",
+        "image_url": "https://imgur.com/plougRS.png",
+        "difficulty": "hard",
+        "price": 975
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "Now THIS is a fine feathered fowl. Plump. Colorful. Coming for you. 2.8\"",
+        "image_url": "https://imgur.com/UqgCpwG.png",
+        "difficulty": "medium",
+        "price": 22420
+      },
+      {
+        "name": "Rooster Brooch",
+        "description": "Someone called this monotone fellow Art Deco. I'll just give you that odd information. 1.4\"",
+        "image_url": "https://imgur.com/Aql47Vg.png",
+        "difficulty": "cruel",
+        "price": 3850
+      },
+      {
+        "name": "A Pair of Pins",
+        "description": "These two pins have names. They are sold as a set: Mr. Rooster and Mrs. Hen. Each 1.5\".",
+        "image_url": "https://imgur.com/3Dh41X5.png",
+        "difficulty": "easy",
+        "price": 169000
+      }
+    ],
+    "created_at": "2025-11-16T19:43:53.756897",
+    "updated_at": "2025-11-16T20:34:38.711618"
+  }
+]
