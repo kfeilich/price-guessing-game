@@ -4,6 +4,9 @@ import os
 import json
 from datetime import datetime
 import secrets
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, JSON
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -12,24 +15,35 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs('data', exist_ok=True)
+
+# Database setup
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+
+if DATABASE_URL:
+    engine = create_engine(DATABASE_URL)
+else:
+    # Fallback to SQLite for local development
+    engine = create_engine('sqlite:///game_sets.db')
+
+Base = declarative_base()
+
+class GameSet(Base):
+    __tablename__ = 'game_sets'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    pitch_line = Column(Text, nullable=False)
+    items = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+Base.metadata.create_all(engine)
+Session = scoped_session(sessionmaker(bind=engine))
 
 # Game state (in production, use Redis or database)
 game_rooms = {}
-game_sets = []
-
-# Load game sets from file if exists
-def load_game_sets():
-    global game_sets
-    if os.path.exists('data/game_sets.json'):
-        with open('data/game_sets.json', 'r') as f:
-            game_sets = json.load(f)
-
-def save_game_sets():
-    with open('data/game_sets.json', 'w') as f:
-        json.dump(game_sets, f, indent=2)
-
-load_game_sets()
 
 # Scoring function - exponential penalty for errors
 def calculate_score(guess, actual, difficulty):
@@ -82,55 +96,68 @@ def upload_set():
         items = data.get('items', [])
         set_id = data.get('set_id')  # If provided, we're updating
         
-        if set_id is not None and set_id != '':
-            # Update existing set
-            found = False
-            for i, game_set in enumerate(game_sets):
-                if game_set['id'] == set_id:
-                    game_sets[i] = {
-                        'id': set_id,
-                        'name': set_name,
-                        'pitch_line': pitch_line,
-                        'items': items,
-                        'created_at': game_set.get('created_at', datetime.now().isoformat()),
-                        'updated_at': datetime.now().isoformat()
-                    }
-                    found = True
-                    save_game_sets()
+        db_session = Session()
+        
+        try:
+            if set_id is not None and set_id != '':
+                # Update existing set
+                game_set = db_session.query(GameSet).filter_by(id=set_id).first()
+                if game_set:
+                    game_set.name = set_name
+                    game_set.pitch_line = pitch_line
+                    game_set.items = items
+                    game_set.updated_at = datetime.utcnow()
+                    db_session.commit()
                     return jsonify({'success': True, 'set_id': set_id, 'updated': True})
+                else:
+                    return jsonify({'success': False, 'error': 'Set not found'}), 404
+            else:
+                # Create new set
+                game_set = GameSet(
+                    name=set_name,
+                    pitch_line=pitch_line,
+                    items=items
+                )
+                db_session.add(game_set)
+                db_session.commit()
+                
+                return jsonify({'success': True, 'set_id': game_set.id})
+        finally:
+            db_session.close()
             
-            if not found:
-                return jsonify({'success': False, 'error': 'Set not found'}), 404
-        else:
-            # Create new set - find next available ID
-            max_id = max([s['id'] for s in game_sets], default=-1)
-            new_id = max_id + 1
-            
-            game_set = {
-                'id': new_id,
-                'name': set_name,
-                'pitch_line': pitch_line,
-                'items': items,
-                'created_at': datetime.now().isoformat()
-            }
-            
-            game_sets.append(game_set)
-            save_game_sets()
-            
-            return jsonify({'success': True, 'set_id': game_set['id']})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/get_sets')
 def get_sets():
-    return jsonify(game_sets)
+    db_session = Session()
+    try:
+        sets = db_session.query(GameSet).all()
+        result = []
+        for s in sets:
+            result.append({
+                'id': s.id,
+                'name': s.name,
+                'pitch_line': s.pitch_line,
+                'items': s.items,
+                'created_at': s.created_at.isoformat() if s.created_at else None
+            })
+        return jsonify(result)
+    finally:
+        db_session.close()
 
 @app.route('/delete_set/<int:set_id>', methods=['DELETE'])
 def delete_set(set_id):
-    global game_sets
-    game_sets = [s for s in game_sets if s['id'] != set_id]
-    save_game_sets()
-    return jsonify({'success': True})
+    db_session = Session()
+    try:
+        game_set = db_session.query(GameSet).filter_by(id=set_id).first()
+        if game_set:
+            db_session.delete(game_set)
+            db_session.commit()
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Set not found'}), 404
+    finally:
+        db_session.close()
 
 @socketio.on('connect')
 def handle_connect():
@@ -170,24 +197,35 @@ def handle_start_set(data):
     set_id = data.get('set_id')
     
     if room in game_rooms and request.sid == game_rooms[room]['gm']:
-        game_set = next((s for s in game_sets if s['id'] == set_id), None)
-        if game_set:
-            game_rooms[room]['current_set'] = game_set
-            game_rooms[room]['current_item_index'] = 0
-            game_rooms[room]['state'] = 'playing'
-            game_rooms[room]['guesses'] = {}
-            
-            # Reset scores for new game
-            for player_id in game_rooms[room]['scores']:
-                game_rooms[room]['scores'][player_id] = 0
-            
-            current_item = game_set['items'][0]
-            emit('show_item', {
-                'item': current_item,
-                'index': 0,
-                'total': len(game_set['items']),
-                'state': 'playing'
-            }, room=room)
+        db_session = Session()
+        try:
+            game_set_db = db_session.query(GameSet).filter_by(id=set_id).first()
+            if game_set_db:
+                game_set = {
+                    'id': game_set_db.id,
+                    'name': game_set_db.name,
+                    'pitch_line': game_set_db.pitch_line,
+                    'items': game_set_db.items
+                }
+                
+                game_rooms[room]['current_set'] = game_set
+                game_rooms[room]['current_item_index'] = 0
+                game_rooms[room]['state'] = 'playing'
+                game_rooms[room]['guesses'] = {}
+                
+                # Reset scores for new game
+                for player_id in game_rooms[room]['scores']:
+                    game_rooms[room]['scores'][player_id] = 0
+                
+                current_item = game_set['items'][0]
+                emit('show_item', {
+                    'item': current_item,
+                    'index': 0,
+                    'total': len(game_set['items']),
+                    'state': 'playing'
+                }, room=room)
+        finally:
+            db_session.close()
 
 @socketio.on('submit_guess')
 def handle_submit_guess(data):
