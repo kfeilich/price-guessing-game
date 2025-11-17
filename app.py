@@ -143,6 +143,11 @@ def get_sets():
                 'created_at': s.created_at.isoformat() if s.created_at else None
             })
         return jsonify(result)
+    except Exception as e:
+        print(f"Error in get_sets: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
     finally:
         db_session.close()
 
