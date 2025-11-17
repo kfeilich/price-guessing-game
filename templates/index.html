@@ -293,7 +293,6 @@
             <input type="text" id="usernameInput" placeholder="Enter your username" />
             <div style="text-align: center;">
                 <button onclick="joinAsPlayer()">Join as Player</button>
-                <button onclick="joinAsGM()">Join as Game Master</button>
             </div>
         </div>
         
@@ -312,7 +311,7 @@
                 <div class="item-description" id="itemDescription"></div>
                 <div id="difficultyBadge" class="difficulty-badge"></div>
                 
-                <div id="guessSection" class="guess-section">
+                <div id="guessSection" class="guess-section hidden">
                     <h3 style="text-align: center; margin-bottom: 15px;">Your Guess</h3>
                     <input type="number" id="guessInput" class="guess-input" placeholder="Enter price in USD" step="0.01" />
                     <div style="text-align: center;">
@@ -388,10 +387,11 @@
             
             if (isGM) {
                 document.getElementById('gmControls').classList.remove('hidden');
-                document.getElementById('waitingText').classList.add('hidden');
+                document.getElementById('waitingText').textContent = 'Select a set to start the game';
             }
             
-            loadSets();
+            // Load sets with a slight delay to ensure connection is established
+            setTimeout(loadSets, 500);
         }
         
         function loadSets() {
@@ -400,6 +400,12 @@
                 .then(sets => {
                     const grid = document.getElementById('setGrid');
                     grid.innerHTML = '';
+                    
+                    if (sets.length === 0) {
+                        grid.innerHTML = '<p style="text-align: center; color: #667eea; grid-column: 1/-1;">No sets available yet. GM: create sets at /gamemaster</p>';
+                        return;
+                    }
+                    
                     sets.forEach(set => {
                         const card = document.createElement('div');
                         card.className = 'set-card';
@@ -413,6 +419,11 @@
                         }
                         grid.appendChild(card);
                     });
+                })
+                .catch(error => {
+                    console.error('Error loading sets:', error);
+                    const grid = document.getElementById('setGrid');
+                    grid.innerHTML = '<p style="text-align: center; color: red; grid-column: 1/-1;">Error loading sets. Check console.</p>';
                 });
         }
         
@@ -466,7 +477,10 @@
             badge.textContent = item.difficulty.toUpperCase();
             badge.className = 'difficulty-badge difficulty-' + item.difficulty;
             
-            document.getElementById('guessSection').classList.remove('hidden');
+            // Only show guess section for players, not GM
+            if (!isGM) {
+                document.getElementById('guessSection').classList.remove('hidden');
+            }
             document.getElementById('guessesReveal').classList.add('hidden');
             document.getElementById('answerReveal').classList.add('hidden');
             
