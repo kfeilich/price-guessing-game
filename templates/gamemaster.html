@@ -283,7 +283,7 @@
             <div class="button-row">
                 <button onclick="saveSet()">Save Set</button>
                 <button class="secondary" onclick="cancelEdit()">Cancel / New Set</button>
-                <button class="secondary" onclick="window.location.href='/'">Go to Game</button>
+                <button class="secondary" onclick="window.open('/', '_blank')">Open Game (New Tab)</button>
             </div>
             
             <div id="message"></div>
@@ -366,15 +366,64 @@
                     itemCounter = 0;
                     
                     // Load items
-                    set.items.forEach(item => {
-                        addItem();
-                        const itemId = itemCounter - 1;
-                        document.getElementById(`itemName-${itemId}`).value = item.name;
-                        document.getElementById(`itemDesc-${itemId}`).value = item.description;
-                        document.getElementById(`itemImage-${itemId}`).value = item.image_url;
-                        document.getElementById(`itemDifficulty-${itemId}`).value = item.difficulty;
-                        document.getElementById(`itemPrice-${itemId}`).value = item.price;
-                        previewImage(itemId);
+                    set.items.forEach((item, index) => {
+                        const itemId = itemCounter++;
+                        items.push({ id: itemId });
+                        
+                        const itemsDiv = document.getElementById('itemsList');
+                        const itemCard = document.createElement('div');
+                        itemCard.className = 'item-card';
+                        itemCard.id = `item-${itemId}`;
+                        itemCard.draggable = true;
+                        itemCard.setAttribute('data-item-id', itemId);
+                        
+                        itemCard.innerHTML = `
+                            <h4><span class="drag-handle">⋮⋮</span> Item ${index + 1}</h4>
+                            <div class="form-group">
+                                <label>Item Name *</label>
+                                <input type="text" id="itemName-${itemId}" placeholder="e.g., 'Vintage Brooch'" value="${item.name}" />
+                            </div>
+                            <div class="form-group">
+                                <label>Description *</label>
+                                <textarea id="itemDesc-${itemId}" placeholder="Gold-toned metal, some stones missing, found in grandmother's drawer">${item.description}</textarea>
+                            </div>
+                            <div class="item-row">
+                                <div class="form-group">
+                                    <label>Image URL *</label>
+                                    <input type="text" id="itemImage-${itemId}" placeholder="https://..." value="${item.image_url}" />
+                                    <img id="preview-${itemId}" class="preview-image" src="${item.image_url}" style="display: block;" />
+                                    <div class="helper-text">Direct link to image (use Imgur, Cloudinary, or similar)</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Difficulty *</label>
+                                    <select id="itemDifficulty-${itemId}">
+                                        <option value="easy" ${item.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
+                                        <option value="medium" ${item.difficulty === 'medium' ? 'selected' : ''}>Medium</option>
+                                        <option value="hard" ${item.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
+                                        <option value="cruel" ${item.difficulty === 'cruel' ? 'selected' : ''}>Cruel</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Actual Price (USD) *</label>
+                                    <input type="number" id="itemPrice-${itemId}" step="0.01" placeholder="42.50" value="${item.price}" />
+                                </div>
+                            </div>
+                            <button class="danger" onclick="removeItem(${itemId})">Remove Item</button>
+                        `;
+                        
+                        // Add event listener for image URL changes
+                        itemCard.querySelector(`#itemImage-${itemId}`).addEventListener('change', function() {
+                            previewImage(itemId);
+                        });
+                        
+                        // Add drag event listeners
+                        itemCard.addEventListener('dragstart', handleDragStart);
+                        itemCard.addEventListener('dragend', handleDragEnd);
+                        itemCard.addEventListener('dragover', handleDragOver);
+                        itemCard.addEventListener('drop', handleDrop);
+                        itemCard.addEventListener('dragleave', handleDragLeave);
+                        
+                        itemsDiv.appendChild(itemCard);
                     });
                     
                     // Scroll to top
@@ -437,7 +486,7 @@
                 <div class="item-row">
                     <div class="form-group">
                         <label>Image URL *</label>
-                        <input type="text" id="itemImage-${itemId}" placeholder="https://..." onchange="previewImage(${itemId})" />
+                        <input type="text" id="itemImage-${itemId}" placeholder="https://..." />
                         <img id="preview-${itemId}" class="preview-image" style="display: none;" />
                         <div class="helper-text">Direct link to image (use Imgur, Cloudinary, or similar)</div>
                     </div>
@@ -457,6 +506,14 @@
                 </div>
                 <button class="danger" onclick="removeItem(${itemId})">Remove Item</button>
             `;
+            
+            // Add event listener for image URL changes
+            itemCard.querySelector(`#itemImage-${itemId}`).addEventListener('change', function() {
+                previewImage(itemId);
+            });
+            itemCard.querySelector(`#itemImage-${itemId}`).addEventListener('input', function() {
+                previewImage(itemId);
+            });
             
             // Add drag event listeners
             itemCard.addEventListener('dragstart', handleDragStart);
