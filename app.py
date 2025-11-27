@@ -22,7 +22,13 @@ if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
 if DATABASE_URL:
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,  # Verify connections before using
+        pool_recycle=300,    # Recycle connections after 5 minutes
+        pool_size=5,
+        max_overflow=10
+    )
 else:
     # Fallback to SQLite for local development
     engine = create_engine('sqlite:///game_sets.db')
